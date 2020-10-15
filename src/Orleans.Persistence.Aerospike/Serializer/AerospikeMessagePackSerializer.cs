@@ -6,7 +6,7 @@ namespace Orleans.Persistence.Aerospike.Serializer
     {
         public Bin[] Serialize(IGrainState grainState)
         {
-            var data = MessagePack.MessagePackSerializer.Typeless.Serialize(grainState);
+            var data = MessagePack.MessagePackSerializer.Typeless.Serialize(grainState.State);
 
             Bin[] bins = new Bin[]
             {

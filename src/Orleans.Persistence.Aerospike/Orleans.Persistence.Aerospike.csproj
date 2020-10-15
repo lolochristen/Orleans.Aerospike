@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   
   <PropertyGroup>
@@ -10,13 +11,15 @@
     <Title>Microsoft Orleans Persistence provider for Aerospike</Title>
     <Description>Microsoft Orleans Persistence provider for Aerospike</Description>
     <PackageIconUrl>https://raw.githubusercontent.com/dotnet/orleans/gh-pages/assets/logo_128.png</PackageIconUrl>
+    <Version>1.0.0-preview-1</Version>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="MessagePack" Version="2.2.60" />
-    <PackageReference Include="Microsoft.Orleans.OrleansProviders" Version="3.0.0" />
-    <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="3.0.0" />
-    <PackageReference Include="Aerospike.Client" Version="3.9.6" />
+    <PackageReference Include="Microsoft.Orleans.OrleansProviders" Version="3.3.0" />
+    <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="3.3.0" />
+    <PackageReference Include="Aerospike.Client" Version="3.9.10" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
   

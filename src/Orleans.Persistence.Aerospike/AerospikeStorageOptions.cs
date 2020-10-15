@@ -18,6 +18,8 @@ namespace Orleans.Persistence.Aerospike
         /// Stage of silo lifecycle where storage should be initialized.  Storage must be initialzed prior to use.
         /// </summary>
         public int InitStage { get; set; } = ServiceLifecycleStage.ApplicationServices;
+
+        public bool VerifyEtagGenerations { get; set; }
     }
 
     //public enum AerospikeDefaultSerializer

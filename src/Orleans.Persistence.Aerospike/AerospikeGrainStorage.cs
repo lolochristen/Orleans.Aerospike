@@ -71,7 +71,12 @@ namespace Orleans.Persistence.Aerospike
                 _aerospikeSerializer.Deserialize(record, grainState);
                 grainState.ETag = record.generation.ToString();
             }
-            catch(Exception exp)
+            catch (AerospikeException aep)
+            {
+                _logger.LogError(aep, $"Failure reading state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                throw new AerospikeOrleansException(aep.Message);
+            }
+            catch (Exception exp)
             {
                 _logger.LogError(exp, $"Failure reading state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
                 grainState.ETag = string.Empty;
@@ -86,7 +91,7 @@ namespace Orleans.Persistence.Aerospike
 
             try
             {
-                if (!string.IsNullOrEmpty(grainState.ETag))
+                if (!string.IsNullOrEmpty(grainState.ETag) && _options.VerifyEtagGenerations)
                 {
                     await _client.Put(
                         new WritePolicy()
@@ -99,15 +104,21 @@ namespace Orleans.Persistence.Aerospike
                 }
                 else
                 {
-                    await _client.Put(
-                        new WritePolicy()
-                        {
-                            sendKey = true
-                        }, Task.Factory.CancellationToken, key, bins);
+                    await _client.Put(new WritePolicy() { sendKey = true } , Task.Factory.CancellationToken, key, bins);
                     grainState.ETag = "1"; // initial 1
                 }
             }
-            catch(Exception exp)
+            catch(AerospikeException aep)
+            {
+                if (aep.Result == 3)
+                {
+                    throw new InconsistentStateException($"Generation conflict while writing Grain Type {grainType} with key {grainReference.ToKeyString()}. Error:{aep.Message}",  grainState.ETag, "?");
+                }
+
+                _logger.LogError(aep, $"Failure writing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                throw new AerospikeOrleansException(aep.Message); // simple serializable excepction
+            }
+            catch (Exception exp)
             {
                 _logger.LogError(exp, $"Failure writing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
                 throw;
@@ -118,5 +129,22 @@ namespace Orleans.Persistence.Aerospike
         {
             return new Key(_options.Namespace, _name + "_" + state.Type.Name, grainReference.ToShortKeyString());
         }
+    }
+
+    [Serializable]
+    public class AerospikeOrleansException : Exception
+    {
+        public AerospikeOrleansException() : base()
+        {
+        }
+
+        public AerospikeOrleansException(string message) : base(message)
+        {
+        }
+
+        public AerospikeOrleansException(string message, Exception innerException) : base(message, innerException)
+        {
+        }
+
     }
 }

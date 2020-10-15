@@ -24,27 +24,43 @@ namespace Orleans.Persistence.Aerospike.Serializer
                 //if (property.GetCustomAttribute<IgnoreAttribute>() != null)
                 //    continue;
 
-                if (property.PropertyType == typeof(string)
-                    || property.PropertyType == typeof(int)
+                if (property.PropertyType == typeof(int))
+                    property.SetValue(obj, (int)(long)recordBin.Value); // cast. is stored as long
+                else if (property.PropertyType == typeof(uint))
+                    property.SetValue(obj, (uint)(long)recordBin.Value); // cast. is stored as long
+                else if (property.PropertyType == typeof(short))
+                    property.SetValue(obj, (short)(long)recordBin.Value); // cast. is stored as long
+                else if (property.PropertyType == typeof(ushort))
+                    property.SetValue(obj, (ushort)(long)recordBin.Value); // cast. is stored as long
+                else if (property.PropertyType == typeof(byte))
+                    property.SetValue(obj, (byte)(long)recordBin.Value); // cast. is stored as long
+                else if (property.PropertyType == typeof(char))
+                    property.SetValue(obj, char.Parse((string)recordBin.Value));
+                else if (property.PropertyType == typeof(float))
+                    property.SetValue(obj, (float)(double)recordBin.Value); // is stored as double
+                else if (property.PropertyType == typeof(string)
                     || property.PropertyType == typeof(short)
                     || property.PropertyType == typeof(long)
-                    || property.PropertyType == typeof(uint)
                     || property.PropertyType == typeof(ushort)
                     || property.PropertyType == typeof(ulong)
                     || property.PropertyType == typeof(byte)
                     || property.PropertyType == typeof(char)
                     || property.PropertyType == typeof(byte[])
-                    || property.PropertyType == typeof(double)
-                    || property.PropertyType == typeof(float)
-                    )
-                    property.SetValue(obj, recordBin.Value);
+                    || property.PropertyType == typeof(double))
+                {
+                    property.SetValue(obj, recordBin.Value); // direct
+                }
+                else if (property.PropertyType == typeof(Guid))
+                {
+                    property.SetValue(obj, new Guid((byte[])recordBin.Value));
+                }
                 else if (property.PropertyType.IsEnum)
                 {
                     object enumValue;
                     Enum.TryParse(property.PropertyType, recordBin.Value.ToString(), out enumValue);
                     property.SetValue(obj, enumValue);
                 }
-                else 
+                else
                 {
                     // deserialize json
                     var o = JsonConvert.DeserializeObject(recordBin.Value.ToString(),
@@ -93,7 +109,7 @@ namespace Orleans.Persistence.Aerospike.Serializer
                 else if (propertyType == typeof(string))
                     binValue = new Value.StringValue((string)value);
                 else if (propertyType == typeof(char))
-                    binValue = new Value.StringValue((string)value);
+                    binValue = new Value.StringValue(((char)value).ToString());
                 else if (propertyType == typeof(double))
                     binValue = new Value.DoubleValue((double)value);
                 else if (propertyType == typeof(float))
@@ -102,6 +118,8 @@ namespace Orleans.Persistence.Aerospike.Serializer
                     binValue = new Value.ByteValue((byte)value);
                 else if (propertyType == typeof(byte[]))
                     binValue = new Value.BytesValue((byte[])value);
+                else if (propertyType == typeof(Guid))
+                    binValue = new Value.BytesValue(((Guid)value).ToByteArray());
                 else if (propertyType.IsEnum)
                     binValue = new Value.StringValue(value.ToString());
                 else // to json
@@ -112,8 +130,5 @@ namespace Orleans.Persistence.Aerospike.Serializer
             return binList.ToArray();
         }
     }
-
-
-
 }
 

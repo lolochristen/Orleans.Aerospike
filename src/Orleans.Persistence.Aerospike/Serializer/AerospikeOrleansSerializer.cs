@@ -14,7 +14,7 @@ namespace Orleans.Persistence.Aerospike.Serializer
 
         public Bin[] Serialize(IGrainState grainState)
         {
-            var data = _serializationManager.SerializeToByteArray(grainState);
+            var data = _serializationManager.SerializeToByteArray(grainState.State);
             
             Bin[] bins = new Bin[]
             {

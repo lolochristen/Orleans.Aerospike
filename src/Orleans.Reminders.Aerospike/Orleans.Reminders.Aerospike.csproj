@@ -1,25 +1,22 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
-    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>Orleans.Clustering.Aerospike</PackageId>
+    <PackageId>Orleans.Reminders.Aerospike</PackageId>
     <Authors>Laurent Christen</Authors>
-    <Title>Microsoft Orleans Cluster provider for Aerospike</Title>
-    <Description>Microsoft Orleans Cluster provider for Aerospike</Description>
+    <Title>Microsoft Orleans Reminder Service for Aerospike</Title>
+    <Description>Microsoft Orleans Reminder Service for Aerospike</Description>
     <PackageIconUrl>https://raw.githubusercontent.com/dotnet/orleans/gh-pages/assets/logo_128.png</PackageIconUrl>
     <Version>1.0.0-preview-1</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
-
+  
   <ItemGroup>
-    <PackageReference Include="Microsoft.Orleans.OrleansProviders" Version="3.3.0" />
     <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="3.3.0" />
     <PackageReference Include="Aerospike.Client" Version="3.9.10" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
   </ItemGroup>
 
 </Project>
