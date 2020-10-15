@@ -4,6 +4,8 @@
 
 [Aerospike](https://www.aerospike.com/) Aerospike is a flash-optimized in-memory open source NoSQL database and the name of the eponymous company that produces it. The combination of in-memory and storage capabilities makes it ideal to use for scaled Orleans environments. 
 
+**Orleans.Aerospike** is a package that use Aerospike as a backend for Orleans providers like Cluster Membership, Grain State storage and Reminders. 
+
 # Installation
 Nuget Packages are provided:
 
