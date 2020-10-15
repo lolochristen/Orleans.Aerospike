@@ -14,6 +14,7 @@
     <PackageIconUrl>https://raw.githubusercontent.com/dotnet/orleans/gh-pages/assets/logo_128.png</PackageIconUrl>
     <PackageTags>Orleans Cloud-Computing Actor-Model Actors Distributed-Systems Aeorospike C# .NET</PackageTags>
     <PackageReleaseNotes></PackageReleaseNotes>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryUrl>https://github.com/lolochristen/Orleans.Aerospike</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <IncludeSymbols>true</IncludeSymbols>
