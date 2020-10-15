@@ -10,7 +10,14 @@
     <Authors>Laurent Christen</Authors>
     <Title>Microsoft Orleans Persistence provider for Aerospike</Title>
     <Description>Microsoft Orleans Persistence provider for Aerospike</Description>
+    <PackageProjectUrl>https://github.com/lolochristen/Orleans.Aerospike</PackageProjectUrl>
     <PackageIconUrl>https://raw.githubusercontent.com/dotnet/orleans/gh-pages/assets/logo_128.png</PackageIconUrl>
+    <PackageTags>Orleans Cloud-Computing Actor-Model Actors Distributed-Systems Aeorospike C# .NET</PackageTags>
+    <PackageReleaseNotes></PackageReleaseNotes>
+    <RepositoryUrl>https://github.com/lolochristen/Orleans.Aerospike</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <IncludeSymbols>true</IncludeSymbols>
+    <IncludeSource>true</IncludeSource>
     <Version>1.0</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
