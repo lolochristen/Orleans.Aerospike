@@ -10,7 +10,7 @@
     <Title>Microsoft Orleans Reminder Service for Aerospike</Title>
     <Description>Microsoft Orleans Reminder Service for Aerospike</Description>
     <PackageIconUrl>https://raw.githubusercontent.com/dotnet/orleans/gh-pages/assets/logo_128.png</PackageIconUrl>
-    <Version>1.0.0-preview-1</Version>
+    <Version>1.0</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
   
