@@ -9,7 +9,9 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Orleans.Clustering.Aerospik
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Orleans.Aerospike.Tests", "test\Orleans.Aerospike.Tests\Orleans.Aerospike.Tests.csproj", "{27A718F0-2372-4A83-8BE8-66B98E46AB35}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Orleans.Reminders.Aerospike", "src\Orleans.Reminders.Aerospike\Orleans.Reminders.Aerospike.csproj", "{8ABE5909-CDFC-46FB-B14B-E9F44C33CE9E}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Orleans.Reminders.Aerospike", "src\Orleans.Reminders.Aerospike\Orleans.Reminders.Aerospike.csproj", "{8ABE5909-CDFC-46FB-B14B-E9F44C33CE9E}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{3EAA4863-CA89-41D3-A1CC-FC1881B0CF19}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -36,6 +38,9 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{27A718F0-2372-4A83-8BE8-66B98E46AB35} = {3EAA4863-CA89-41D3-A1CC-FC1881B0CF19}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {551F0E10-6D44-4043-8BC6-7DF3D7955485}

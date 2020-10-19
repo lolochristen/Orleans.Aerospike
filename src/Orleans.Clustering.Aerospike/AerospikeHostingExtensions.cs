@@ -1,12 +1,14 @@
 ﻿using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using Orleans;
+using Orleans.Clustering.Aerospike;
 using Orleans.Hosting;
 using Orleans.Messaging;
 using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace Orleans.Clustering.Aerospike
+namespace Microsoft.Extensions.Hosting
 {
     public static class AerospikeHostingExtensions
     {
