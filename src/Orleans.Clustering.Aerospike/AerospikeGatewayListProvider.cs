@@ -19,6 +19,7 @@ namespace Orleans.Clustering.Aerospike
         private TimeSpan _maxStaleness;
         private ILoggerFactory _loggerFactory;
         private AerospikeGatewayOptions _options;
+        private AsyncClientPolicy _clientPolicy;
         private AsyncClient _client;
 
         public TimeSpan MaxStaleness => _maxStalness;
@@ -38,7 +39,7 @@ namespace Orleans.Clustering.Aerospike
         {
             return Task.Run<IList<Uri>>(() =>
             {
-                var recordSet = _client.Query(new QueryPolicy { sendKey = true }, new Statement()
+                var recordSet = _client.Query(null, new Statement()
                 {
                     Filter = Filter.Equal("clusterid", _clusterId),
                     Namespace = _options.Namespace,
@@ -64,9 +65,18 @@ namespace Orleans.Clustering.Aerospike
             });
         }
 
-        public async Task InitializeGatewayListProvider()
+        public Task InitializeGatewayListProvider()
         {
-            _client = new AsyncClient(_options.Host, _options.Port);
+            return Task.Run(() =>
+            {
+                _clientPolicy = new AsyncClientPolicy()
+                {
+                    user = _options.Username,
+                    password = _options.Password
+                };
+
+                _client = new AsyncClient(_clientPolicy, _options.Host, _options.Port);
+            });
         }
     }
 }

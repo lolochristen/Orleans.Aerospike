@@ -16,6 +16,7 @@ namespace Orleans.Reminders.Aerospike
         private ILoggerFactory _loggerFactory;
         private ILogger<AerospikeReminderTable> _logger;
         private AerospikeReminderStorageOptions _options;
+        private AsyncClientPolicy _clientPolicy;
         private AsyncClient _client;
         private readonly string _serviceId;
 
@@ -30,12 +31,18 @@ namespace Orleans.Reminders.Aerospike
             _serviceId = clusterOptions.Value.ServiceId;
         }
 
-        public async Task Init()
+        public Task Init()
         {
-            _client = new AsyncClient(_options.Host, _options.Port);
-
-            await Task.Run(() =>
+            return Task.Run(() =>
             {
+                _clientPolicy = new AsyncClientPolicy()
+                {
+                    user = _options.Username,
+                    password = _options.Password
+                };
+
+                _client = new AsyncClient(_clientPolicy, _options.Host, _options.Port);
+
                 try
                 {
                     var task = _client.CreateIndex(new Policy(), _options.Namespace, _options.SetName + "_" + _serviceId, "grainhashIdx", "grainhash", IndexType.NUMERIC);
@@ -51,7 +58,7 @@ namespace Orleans.Reminders.Aerospike
             return Task.Run(() =>
             {
                 var key = CreateKey(grainRef, reminderName);
-                var record = _client.Get(new BatchPolicy() { sendKey = true }, key);
+                var record = _client.Get(null, key);
                 if (record != null)
                     return ParseRecord(record);
                 else
@@ -66,7 +73,7 @@ namespace Orleans.Reminders.Aerospike
                 var entries = new List<ReminderEntry>();
                 try
                 {
-                    var recordSet = _client.Query(new QueryPolicy { sendKey = true }, new Statement()
+                    var recordSet = _client.Query(null, new Statement()
                     {
                         Filter = Filter.Equal("grainhash", key.GetUniformHashCode()),
                         Namespace = _options.Namespace,
@@ -95,7 +102,7 @@ namespace Orleans.Reminders.Aerospike
                 try
                 {
                     //_client.Query(new QueryPolicy(), new Statement(), (a, r) => { });
-                    var recordSet = _client.Query(new QueryPolicy { sendKey = true }, new Statement()
+                    var recordSet = _client.Query(null, new Statement()
                     {
                         Filter = begin < end ? Filter.Range("grainhash", begin, end) : Filter.Range("grainhash", end, begin),
                         Namespace = _options.Namespace,
@@ -121,7 +128,7 @@ namespace Orleans.Reminders.Aerospike
             return Task.Run(() =>
             {
                 var key = CreateKey(grainRef, reminderName);
-                return _client.Delete(new WritePolicy(), key);
+                return _client.Delete(null, key);
             });
         }
 
@@ -137,14 +144,14 @@ namespace Orleans.Reminders.Aerospike
 
             if (string.IsNullOrEmpty(entry.ETag))
             {
-                await _client.Put(new WritePolicy() { sendKey = true }, Task.Factory.CancellationToken, key, bins);
+                await _client.Put(new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true }, Task.Factory.CancellationToken, key, bins);
                 return "1";
             }
             else
             {
                 var gen = int.Parse(entry.ETag);
                 await _client.Put(
-                    new WritePolicy() { sendKey = true, generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, generation = gen },
+                    new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true, generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, generation = gen },
                     Task.Factory.CancellationToken,
                     key, bins);
                 return (gen++).ToString();

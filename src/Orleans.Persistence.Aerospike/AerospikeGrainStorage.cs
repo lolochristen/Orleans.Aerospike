@@ -21,6 +21,10 @@ namespace Orleans.Persistence.Aerospike
         private AsyncClient _client;
         private IAerospikeSerializer _aerospikeSerializer;
 
+        private AsyncClientPolicy _clientPolicy;
+        private BatchPolicy _readPolicy;
+        private WritePolicy _writeStatePolicy;
+
         public AerospikeGrainStorage(string name,
             AerospikeStorageOptions options,
             IAerospikeSerializer aerospikeSerializer,
@@ -41,7 +45,48 @@ namespace Orleans.Persistence.Aerospike
         public async Task Init(CancellationToken cancellationToken)
         {
             _logger.LogInformation($"Init host={_options.Host} port={_options.Port} ns:{_options.Namespace} serializer={_aerospikeSerializer.GetType().Name}");
-            _client = new AsyncClient(_options.Host, _options.Port);
+
+            _clientPolicy = new AsyncClientPolicy()
+            {
+                user = _options.Username,
+                password = _options.Password
+            };
+
+            _readPolicy = new BatchPolicy(_clientPolicy.batchPolicyDefault)
+            {
+                sendKey = true
+            };
+
+            _writeStatePolicy = new WritePolicy(_clientPolicy.writePolicyDefault)
+            {
+                recordExistsAction = RecordExistsAction.REPLACE
+            };
+
+            Log.SetLevel(Log.Level.INFO);
+            Log.SetCallback((level, message) => 
+            {
+                LogLevel logLevel = LogLevel.None;
+                switch(level)
+                {
+                    case Log.Level.DEBUG:
+                        logLevel = LogLevel.Debug;
+                        break;
+                    case Log.Level.ERROR:
+                        logLevel = LogLevel.Error;
+                        break;
+                    case Log.Level.INFO:
+                        logLevel = LogLevel.Information;
+                        break;
+                    case Log.Level.WARN:
+                        logLevel = LogLevel.Warning;
+                        break;
+                }
+                _logger.Log(logLevel, "Aerospike-Message: " + message);
+            });
+
+            _client = new AsyncClient(_clientPolicy,
+                _options.Host, 
+                _options.Port);
         }
 
         private async Task Close(CancellationToken cancellationToken)
@@ -60,7 +105,7 @@ namespace Orleans.Persistence.Aerospike
 
             try
             {
-                var record = await _client.Get(new BatchPolicy(new Policy() { sendKey = true }), Task.Factory.CancellationToken, key);
+                var record = await _client.Get(_readPolicy, Task.Factory.CancellationToken, key);
 
                 if (record == null)
                 {
@@ -94,17 +139,16 @@ namespace Orleans.Persistence.Aerospike
                 if (!string.IsNullOrEmpty(grainState.ETag) && _options.VerifyEtagGenerations)
                 {
                     await _client.Put(
-                        new WritePolicy()
+                        new WritePolicy(_writeStatePolicy)
                         {
-                            sendKey = true,
                             generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL,
-                            generation = int.Parse(grainState.ETag)
+                            generation = int.Parse(grainState.ETag),
                         }, Task.Factory.CancellationToken, key, bins);
                     grainState.ETag = (int.Parse(grainState.ETag) + 1).ToString(); // +1
                 }
                 else
                 {
-                    await _client.Put(new WritePolicy() { sendKey = true } , Task.Factory.CancellationToken, key, bins);
+                    await _client.Put(_writeStatePolicy , Task.Factory.CancellationToken, key, bins);
                     grainState.ETag = "1"; // initial 1
                 }
             }

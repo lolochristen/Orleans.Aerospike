@@ -18,6 +18,7 @@ namespace Orleans.Clustering.Aerospike
         private ILoggerFactory _loggerFactory;
         private ILogger<AerospikeMembershipTable> _logger;
         private AerospikeClusteringOptions _options;
+        private AsyncClientPolicy _clientPolicy;
         private AsyncClient _client;
 
         public AerospikeMembershipTable(ILoggerFactory loggerFactory, IOptions<ClusterOptions> clusterOptions, IOptions<AerospikeClusteringOptions> clusteringOptions)
@@ -44,7 +45,13 @@ namespace Orleans.Clustering.Aerospike
 
         public async Task InitializeMembershipTable(bool tryInitTableVersion)
         {
-            _client = new AsyncClient(_options.Host, _options.Port);
+            _clientPolicy = new AsyncClientPolicy()
+            {
+                user = _options.Username,
+                password = _options.Password
+            };
+
+            _client = new AsyncClient(_clientPolicy, _options.Host, _options.Port);
 
             await Task.Run(async () =>
             {
@@ -52,7 +59,7 @@ namespace Orleans.Clustering.Aerospike
 
                 try
                 {
-                    var task = _client.CreateIndex(new Policy(), _options.Namespace, _options.SetName, "clusterIdx", "clusterid", IndexType.STRING);
+                    var task = _client.CreateIndex(null, _options.Namespace, _options.SetName, "clusterIdx", "clusterid", IndexType.STRING);
                     task.Wait();
                 }
                 catch(Exception)
@@ -74,7 +81,7 @@ namespace Orleans.Clustering.Aerospike
             {
                 var entries = new List<Tuple<MembershipEntry, string>>();
 
-                var recordSetVersion = _client.Get(new BatchPolicy(), new Key(_options.Namespace, _options.SetName, _clusterOptions.ClusterId));
+                var recordSetVersion = _client.Get(null, new Key(_options.Namespace, _options.SetName, _clusterOptions.ClusterId));
 
                 TableVersion version = null;
 
@@ -85,7 +92,7 @@ namespace Orleans.Clustering.Aerospike
 
                 try
                 {
-                    var recordSet = _client.Query(new QueryPolicy { sendKey = true }, new Statement()
+                    var recordSet = _client.Query(null, new Statement()
                     {
                         Filter = Filter.Equal("clusterid", _clusterOptions.ClusterId),
                         Namespace = _options.Namespace,
@@ -115,12 +122,12 @@ namespace Orleans.Clustering.Aerospike
         {
             var siloId = GetSiloEntityId(key);
 
-            var record = await _client.Get(new BatchPolicy(), Task.Factory.CancellationToken, new Key(_options.Namespace, _options.SetName, siloId));
+            var record = await _client.Get(null, Task.Factory.CancellationToken, new Key(_options.Namespace, _options.SetName, siloId));
             var entries = new List<Tuple<MembershipEntry, string>>();
             entries.Add(new Tuple<MembershipEntry, string>(ParseMembershipEntryRecord(record), record.generation.ToString()));
 
             TableVersion version = null;
-            var recordSetVersion = _client.Get(new BatchPolicy(), new Key(_options.Namespace, _options.SetName, _clusterOptions.ClusterId));
+            var recordSetVersion = _client.Get(null, new Key(_options.Namespace, _options.SetName, _clusterOptions.ClusterId));
             if (recordSetVersion != null)
                 version = new TableVersion(recordSetVersion.GetInt("version"), recordSetVersion.generation.ToString());
 
@@ -183,14 +190,14 @@ namespace Orleans.Clustering.Aerospike
             if (string.IsNullOrEmpty(etag))
             {
                 await _client.Put(
-                    new WritePolicy() { sendKey = true }, 
+                    new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true }, 
                     Task.Factory.CancellationToken, 
                     new Key(_options.Namespace, _options.SetName, siloid), bins);
             }
             else
             {
                 await _client.Put(
-                    new WritePolicy() { sendKey = true, generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, generation = int.Parse(etag)}, 
+                    new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true, generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, generation = int.Parse(etag)}, 
                     Task.Factory.CancellationToken, 
                     new Key(_options.Namespace, _options.SetName, siloid), bins);
             }
@@ -206,7 +213,7 @@ namespace Orleans.Clustering.Aerospike
 
             if (string.IsNullOrEmpty(version.VersionEtag))
             {
-                await _client.Put(new WritePolicy() { sendKey = true }, Task.Factory.CancellationToken, new Key(_options.Namespace, _options.SetName, id), bins);
+                await _client.Put(new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true }, Task.Factory.CancellationToken, new Key(_options.Namespace, _options.SetName, id), bins);
             }
             else
             {
