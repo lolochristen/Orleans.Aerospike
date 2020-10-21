@@ -65,25 +65,15 @@ namespace OrleansHotelBooking.Client
             var guests = guestTasks.Select(p => p.Result).ToArray();
 
             var start = DateTime.Now;
-            var bookingTasks = new List<Task<BookingResponse>>();
-
-            Console.WriteLine("\nCreate Bookings 1/2");
-            for (int i = 0; i < TotalBookings / 2; i++)
-            {
-                var hotelKey = hotels[_random.Next(0, hotels.Length - 1)];
-                var guestKey = guests[_random.Next(0, guests.Length - 1)];
-                bookingTasks.Add(Book(hotelKey, guestKey));
-            }
-
-            Task.WaitAll(bookingTasks.ToArray());
+            var bookingTasks = new List<Task<BokkingResponseStats>>();
 
             //Console.WriteLine("\nEnforce deactivate all");
             //IManagementGrain managementGrain = _client.GetGrain<IManagementGrain>(0);
             //await managementGrain.ForceActivationCollection(new TimeSpan(0, 0, 0));
 
-            Console.WriteLine("\nCreate Bookings 2/2");
+            Console.WriteLine("\nCreate Bookings");
             bookingTasks.Clear();
-            for (int i = 0; i < TotalBookings / 2; i++)
+            for (int i = 0; i < TotalBookings; i++)
             {
                 var hotelKey = hotels[_random.Next(0, hotels.Length - 1)];
                 var guestKey = guests[_random.Next(0, guests.Length - 1)];
@@ -92,7 +82,10 @@ namespace OrleansHotelBooking.Client
 
             Task.WaitAll(bookingTasks.ToArray());
 
-            Console.WriteLine($"\nDone in {(DateTime.Now - start)}: Successful:{_bookingsSuccessful} NoRoom:{_bookingsNoRoom} Failed:{_bookingsFailed}  ");
+            var duration = DateTime.Now - start;
+            Console.WriteLine($"\nDone in {duration}: Successful:{_bookingsSuccessful} NoRoom:{_bookingsNoRoom} Failed:{_bookingsFailed}  ");
+            Console.WriteLine($"Max:{bookingTasks.Max(p => p.Result.Duration)} Min:{bookingTasks.Min(p => p.Result.Duration)} Avg:{(new TimeSpan((long)bookingTasks.Average(p => p.Result.Duration.Ticks)))}");
+            Console.WriteLine($"{bookingTasks.Count / duration.TotalSeconds} bookings per second.");
         }
  
         async Task<string> CreateHotel()
@@ -115,9 +108,11 @@ namespace OrleansHotelBooking.Client
             return id;
         }
 
-        async Task<BookingResponse> Book(string hotelKey, string guestKey)
+        async Task<BokkingResponseStats> Book(string hotelKey, string guestKey)
         {
             Console.Write(".");
+            DateTime start = DateTime.Now;
+
             //Console.WriteLine($"Book {guestKey} {hotelKey}");
             var hotelAGrain = _client.GetGrain<IHotelGrain>(hotelKey);
             var guest1Grain = _client.GetGrain<IGuestGrain>(guestKey);
@@ -146,9 +141,15 @@ namespace OrleansHotelBooking.Client
                 Console.Write("E["+exp.Message+"]");
                 Interlocked.Increment(ref _bookingsFailed);
             }
-            return response;
+            return new BokkingResponseStats() { Response = response, Duration = DateTime.Now - start };
         }
 
         public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+        internal class BokkingResponseStats
+        {
+            public BookingResponse Response { get; set; }
+            public TimeSpan Duration { get; set; }
+        }
     }
 }
