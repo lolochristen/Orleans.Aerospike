@@ -55,13 +55,13 @@ namespace Orleans.Aerospike.Tests
 
         public Task InitializeAsync() => this.Host.StartAsync();
 
-        public Task DisposeAsync()
+        public async Task DisposeAsync()
         {
             try
             {
-                return this.Host.StopAsync();
+                await Host.StopAsync();
             }
-            catch { return Task.CompletedTask; }
+            catch { }
         }
 
         public async Task DeactivateGrains()

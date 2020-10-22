@@ -43,8 +43,7 @@ namespace Orleans.Clustering.Aerospike
                 {
                     Filter = Filter.Equal("clusterid", _clusterId),
                     Namespace = _options.Namespace,
-                    SetName = _options.SetName,
-                    IndexName = "clusterIdx"
+                    SetName = _options.SetName
                 });
 
                 var uris = new List<Uri>();
@@ -53,10 +52,11 @@ namespace Orleans.Clustering.Aerospike
                     var record = recordSet.Record;
 
                     var status = (SiloStatus)record.GetInt("status");
+                    var proxyPort = record.GetInt("proxyport");
 
-                    if (status == SiloStatus.Active)
+                    if (status == SiloStatus.Active && proxyPort > 0)
                     {
-                        var address = SiloAddress.New(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(record.GetString("address")), record.GetInt("proxyport")), record.GetInt("generation"));
+                        var address = SiloAddress.New(new System.Net.IPEndPoint(System.Net.IPAddress.Parse(record.GetString("address")), proxyPort), record.GetInt("generation"));
                         uris.Add(address.ToGatewayUri());
                     }
                 }

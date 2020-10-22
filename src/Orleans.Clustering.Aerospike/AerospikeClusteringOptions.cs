@@ -12,5 +12,7 @@ namespace Orleans.Clustering.Aerospike
         public string SetName { get; set; } = "membershipTable";
         public string Username { get; set; }
         public string Password { get; set; }
+        public bool CleanupOnInit { get; set; }
+        public bool VerifyEtagGenerations { get; set; } = true;
     }
 }

@@ -31,7 +31,18 @@ namespace Orleans.Clustering.Aerospike
 
         public Task CleanupDefunctSiloEntries(DateTimeOffset beforeDate)
         {
-            return Task.Run(() => _client.Truncate(new InfoPolicy { }, _options.Namespace, _options.Namespace, beforeDate.DateTime));
+            return Task.Run(() =>
+            {
+                try
+                {
+                    _client.Truncate(null, _options.Namespace, _options.SetName, beforeDate.DateTime);
+                }
+                catch(Exception exp)
+                {
+                    _logger.LogError(exp, "Truncate failed. {0} {1} {2} ", _options.Namespace, _options.SetName, beforeDate);
+                    throw;
+                }
+            });
         }
 
         public async Task DeleteMembershipTableEntries(string clusterId)
@@ -45,77 +56,90 @@ namespace Orleans.Clustering.Aerospike
 
         public async Task InitializeMembershipTable(bool tryInitTableVersion)
         {
-            _clientPolicy = new AsyncClientPolicy()
-            {
-                user = _options.Username,
-                password = _options.Password
-            };
-
-            _client = new AsyncClient(_clientPolicy, _options.Host, _options.Port);
-
             await Task.Run(async () =>
             {
+                _clientPolicy = new AsyncClientPolicy()
+                {
+                    user = _options.Username,
+                    password = _options.Password
+                };
+
+                _client = new AsyncClient(_clientPolicy, _options.Host, _options.Port);
+
+
+                if (_options.CleanupOnInit)
+                {
+                    _client.Truncate(null, _options.Namespace, _options.SetName, null);
+                }
+
                 await PutTableVersionEntry(new TableVersion(0, ""));
 
                 try
                 {
-                    var task = _client.CreateIndex(null, _options.Namespace, _options.SetName, "clusterIdx", "clusterid", IndexType.STRING);
+                    var task = _client.CreateIndex(null, _options.Namespace, _options.SetName, _options.SetName + "_clusterIdx", "clusterid", IndexType.STRING);
                     task.Wait();
                 }
                 catch(Exception)
-                { }
-
+                {
+                    // todo: evaluate if error comes from multiple index creation or other source
+                }
             });
         }
 
         public async Task<bool> InsertRow(MembershipEntry entry, TableVersion tableVersion)
         {
-            await PutTableVersionEntry(tableVersion);
-            await PutMembershipEntry(entry, null);
-            return true;
+            try
+            {
+                await PutMembershipEntry(entry, null, false);
+                await PutTableVersionEntry(tableVersion);
+                return true;
+            }
+            catch(Exception exp)
+            {
+                _logger.LogError(exp, "Insert MembershipEntry failed.");
+                return false;
+            }
         }
 
-        public Task<MembershipTableData> ReadAll()
+        public async Task<MembershipTableData> ReadAll()
         {
-            return Task.Run(() =>
+            var entries = new List<Tuple<MembershipEntry, string>>();
+
+            TableVersion version = await ReadTableVersion();
+
+            try
             {
-                var entries = new List<Tuple<MembershipEntry, string>>();
-
-                var recordSetVersion = _client.Get(null, new Key(_options.Namespace, _options.SetName, _clusterOptions.ClusterId));
-
-                TableVersion version = null;
-
-                if (recordSetVersion != null)
+                var recordSet = _client.Query(null, new Statement()
                 {
-                    version = new TableVersion(recordSetVersion.GetInt("version"), recordSetVersion.generation.ToString());
-                }
+                    Filter = Filter.Equal("clusterid", _clusterOptions.ClusterId),
+                    Namespace = _options.Namespace,
+                    SetName = _options.SetName
+                });
 
-                try
+                while (recordSet.Next())
                 {
-                    var recordSet = _client.Query(null, new Statement()
-                    {
-                        Filter = Filter.Equal("clusterid", _clusterOptions.ClusterId),
-                        Namespace = _options.Namespace,
-                        SetName = _options.SetName, 
-                        IndexName = "clusterIdx"
-                    });
-
-                    while (recordSet.Next())
-                    {
-                        entries.Add(
-                            new Tuple<MembershipEntry, string>(
-                                ParseMembershipEntryRecord(recordSet.Record),
-                                recordSet.Record.generation.ToString()));
-                    }
+                    entries.Add(
+                        new Tuple<MembershipEntry, string>(
+                            ParseMembershipEntryRecord(recordSet.Record),
+                            recordSet.Record.generation.ToString()));
                 }
-                catch (Exception exp)
-                {
+            }
+            catch (Exception exp)
+            {
 
-                }
+            }
 
-                var data = new MembershipTableData(entries, version);
-                return data;
-            });
+            var data = new MembershipTableData(entries, version);
+            return data;
+        }
+
+        private async Task<TableVersion> ReadTableVersion()
+        {
+            TableVersion version = null;
+            var recordVersion = await _client.Get(null, Task.Factory.CancellationToken, new Key(_options.Namespace, _options.SetName, _clusterOptions.ClusterId));
+            if (recordVersion != null)
+                version = new TableVersion(recordVersion.GetInt("version"), recordVersion.generation.ToString());
+            return version;
         }
 
         public async Task<MembershipTableData> ReadRow(SiloAddress key)
@@ -126,10 +150,7 @@ namespace Orleans.Clustering.Aerospike
             var entries = new List<Tuple<MembershipEntry, string>>();
             entries.Add(new Tuple<MembershipEntry, string>(ParseMembershipEntryRecord(record), record.generation.ToString()));
 
-            TableVersion version = null;
-            var recordSetVersion = _client.Get(null, new Key(_options.Namespace, _options.SetName, _clusterOptions.ClusterId));
-            if (recordSetVersion != null)
-                version = new TableVersion(recordSetVersion.GetInt("version"), recordSetVersion.generation.ToString());
+            TableVersion version = await ReadTableVersion();
 
             var data = new MembershipTableData(entries, version);
             return data;
@@ -149,27 +170,42 @@ namespace Orleans.Clustering.Aerospike
             entry.Status = (SiloStatus)record.GetInt("status");
             var st = record.GetString("suspecttimes");
             if (!string.IsNullOrEmpty(st))
-                entry.SuspectTimes = JsonConvert.DeserializeObject<List<Tuple<SiloAddress, DateTime>>>(st);
+                entry.SuspectTimes = JsonConvert.DeserializeObject<List<Tuple<SiloAddress, DateTime>>>(st, JsonSerializerHelper.SerializerSettings);
             entry.UpdateZone = record.GetInt("updatezone");
             return entry;
         }
 
         public async Task UpdateIAmAlive(MembershipEntry entry)
         {
-            await PutMembershipEntry(entry, null);
+            var siloid = GetSiloEntityId(entry.SiloAddress);
+            await _client.Put(
+                   new WritePolicy(_clientPolicy.writePolicyDefault)
+                   {
+                       recordExistsAction = RecordExistsAction.UPDATE
+                   },
+                   Task.Factory.CancellationToken,
+                   new Key(_options.Namespace, _options.SetName, siloid), 
+                   new Bin[] { new Bin("iamalivetime", entry.IAmAliveTime.ToBinary()) });
         }
 
         public async Task<bool> UpdateRow(MembershipEntry entry, string etag, TableVersion tableVersion)
         {
-            await PutTableVersionEntry(tableVersion);
-            await PutMembershipEntry(entry, etag);
-            return true;
+            try
+            {
+                await PutMembershipEntry(entry, etag, true);
+                await PutTableVersionEntry(tableVersion);
+                return true;
+            }
+            catch(Exception exp)
+            {
+                _logger.LogError(exp, "Update MembershipEntry failed.");
+                return false;
+            }
         }
 
-        private async Task PutMembershipEntry(MembershipEntry entry, string etag)
+        private Bin[] BuildMembershipEntryBins(MembershipEntry entry)
         {
-            var siloid = GetSiloEntityId(entry.SiloAddress);
-            var bins = new Bin[]
+            return new Bin[]
             {
                 new Bin("clusterid", _clusterOptions.ClusterId),
                 new Bin("address", entry.SiloAddress.Endpoint.Address.ToString()),
@@ -183,21 +219,37 @@ namespace Orleans.Clustering.Aerospike
                 new Bin("siloname", entry.SiloName),
                 new Bin("starttime", entry.StartTime.ToBinary()),
                 new Bin("status", (int) entry.Status),
-                new Bin("suspecttimes", JsonConvert.SerializeObject(entry.SuspectTimes)),
+                new Bin("suspecttimes", JsonConvert.SerializeObject(entry.SuspectTimes, JsonSerializerHelper.SerializerSettings)),
                 new Bin("updatezone", entry.UpdateZone),
             };
+        }
 
-            if (string.IsNullOrEmpty(etag))
+        private async Task PutMembershipEntry(MembershipEntry entry, string etag, bool isUpdate)
+        {
+            var siloid = GetSiloEntityId(entry.SiloAddress);
+            var bins = BuildMembershipEntryBins(entry);
+
+            if (string.IsNullOrEmpty(etag) || _options.VerifyEtagGenerations == false)
             {
                 await _client.Put(
-                    new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true }, 
+                    new WritePolicy(_clientPolicy.writePolicyDefault)
+                    {
+                        sendKey = true, 
+                        recordExistsAction = isUpdate ? RecordExistsAction.UPDATE : RecordExistsAction.CREATE_ONLY 
+                    }, 
                     Task.Factory.CancellationToken, 
                     new Key(_options.Namespace, _options.SetName, siloid), bins);
             }
             else
             {
                 await _client.Put(
-                    new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true, generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, generation = int.Parse(etag)}, 
+                    new WritePolicy(_clientPolicy.writePolicyDefault)
+                    {
+                        sendKey = true,
+                        recordExistsAction = isUpdate ? RecordExistsAction.UPDATE : RecordExistsAction.CREATE_ONLY,
+                        generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, 
+                        generation = int.Parse(etag)
+                    }, 
                     Task.Factory.CancellationToken, 
                     new Key(_options.Namespace, _options.SetName, siloid), bins);
             }
@@ -211,7 +263,7 @@ namespace Orleans.Clustering.Aerospike
                 new Bin("version", version.Version),
             };
 
-            if (string.IsNullOrEmpty(version.VersionEtag))
+            if (string.IsNullOrEmpty(version.VersionEtag) || _options.VerifyEtagGenerations == false)
             {
                 await _client.Put(new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true }, Task.Factory.CancellationToken, new Key(_options.Namespace, _options.SetName, id), bins);
             }
@@ -222,7 +274,6 @@ namespace Orleans.Clustering.Aerospike
                     Task.Factory.CancellationToken, 
                     new Key(_options.Namespace, _options.SetName, id), bins);
             }
-
         }
 
         private static string GetSiloEntityId(SiloAddress silo)
