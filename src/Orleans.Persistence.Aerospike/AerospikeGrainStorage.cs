@@ -7,6 +7,7 @@ using Orleans.Runtime;
 using Orleans.Serialization;
 using Orleans.Storage;
 using System;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -59,7 +60,8 @@ namespace Orleans.Persistence.Aerospike
 
             _writeStatePolicy = new WritePolicy(_clientPolicy.writePolicyDefault)
             {
-                recordExistsAction = RecordExistsAction.REPLACE
+                recordExistsAction = RecordExistsAction.REPLACE,
+                sendKey = true
             };
 
             Log.SetLevel(Log.Level.INFO);
@@ -94,9 +96,25 @@ namespace Orleans.Persistence.Aerospike
             _client.Close();
         }
 
-        public Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+        public async Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
         {
-            return Task.CompletedTask;
+            var key = GetKey(grainReference, grainState);
+
+            try
+            {
+                await _client.Delete(_writeStatePolicy, Task.Factory.CancellationToken, key);
+                grainState.ETag = null;
+                grainState.RecordExists = false;
+            }
+            catch (AerospikeException aep)
+            {
+                _logger.LogError(aep, $"Failure clearing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                throw new AerospikeOrleansException(aep.Message);
+            }
+            catch (Exception exp)
+            {
+                _logger.LogError(exp, $"Failure clearing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+            }
         }
 
         public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
@@ -109,12 +127,14 @@ namespace Orleans.Persistence.Aerospike
 
                 if (record == null)
                 {
-                    grainState.ETag = string.Empty;
+                    grainState.ETag = null;
+                    grainState.RecordExists = false;
                     return;
                 }
 
                 _aerospikeSerializer.Deserialize(record, grainState);
                 grainState.ETag = record.generation.ToString();
+                grainState.RecordExists = true;
             }
             catch (AerospikeException aep)
             {
@@ -124,7 +144,8 @@ namespace Orleans.Persistence.Aerospike
             catch (Exception exp)
             {
                 _logger.LogError(exp, $"Failure reading state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
-                grainState.ETag = string.Empty;
+                grainState.ETag = null;
+                grainState.RecordExists = true;
             }
         }
 
@@ -136,21 +157,25 @@ namespace Orleans.Persistence.Aerospike
 
             try
             {
+                var ops = bins.Select(p => new Operation(Operation.Type.WRITE, p.name, p.value)).ToList();
+                ops.Add(new Operation(Operation.Type.READ_HEADER, "", Value.AsNull));
+
                 if (!string.IsNullOrEmpty(grainState.ETag) && _options.VerifyEtagGenerations)
                 {
-                    await _client.Put(
-                        new WritePolicy(_writeStatePolicy)
-                        {
-                            generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL,
-                            generation = int.Parse(grainState.ETag),
-                        }, Task.Factory.CancellationToken, key, bins);
-                    grainState.ETag = (int.Parse(grainState.ETag) + 1).ToString(); // +1
+                    var record = await _client.Operate(new WritePolicy(_writeStatePolicy)
+                    {
+                        generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL,
+                        generation = int.Parse(grainState.ETag),
+                    }, Task.Factory.CancellationToken, key, ops.ToArray());
+                    grainState.ETag = record.generation.ToString();
                 }
                 else
                 {
-                    await _client.Put(_writeStatePolicy , Task.Factory.CancellationToken, key, bins);
-                    grainState.ETag = "1"; // initial 1
+                    var record = await _client.Operate(_writeStatePolicy, Task.Factory.CancellationToken, key, ops.ToArray());
+                    grainState.ETag = record.generation.ToString();
                 }
+
+                grainState.RecordExists = true;
             }
             catch(AerospikeException aep)
             {
@@ -173,22 +198,5 @@ namespace Orleans.Persistence.Aerospike
         {
             return new Key(_options.Namespace, _name + "_" + state.Type.Name, grainReference.ToShortKeyString());
         }
-    }
-
-    [Serializable]
-    public class AerospikeOrleansException : Exception
-    {
-        public AerospikeOrleansException() : base()
-        {
-        }
-
-        public AerospikeOrleansException(string message) : base(message)
-        {
-        }
-
-        public AerospikeOrleansException(string message, Exception innerException) : base(message, innerException)
-        {
-        }
-
     }
 }
