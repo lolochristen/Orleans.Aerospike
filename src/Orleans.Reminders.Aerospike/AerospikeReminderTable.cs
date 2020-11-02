@@ -5,6 +5,7 @@ using Orleans.Configuration;
 using Orleans.Runtime;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Orleans.Reminders.Aerospike
@@ -141,20 +142,24 @@ namespace Orleans.Reminders.Aerospike
         {
             var key = CreateKey(entry.GrainRef, entry.ReminderName);
             var bins = ToBins(entry);
+            var ops = bins.Select(p => new Operation(Operation.Type.WRITE, p.name, p.value)).ToList();
+            ops.Add(new Operation(Operation.Type.READ_HEADER, "", Value.AsNull));
 
-            if (string.IsNullOrEmpty(entry.ETag))
+            if (!string.IsNullOrEmpty(entry.ETag))
             {
-                await _client.Put(new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true }, Task.Factory.CancellationToken, key, bins);
-                return "1";
+                var record = await _client.Operate(new WritePolicy(_clientPolicy.writePolicyDefault)
+                {
+                    sendKey = true,
+                    generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL,
+                    generation = int.Parse(entry.ETag),
+                }, Task.Factory.CancellationToken, key, ops.ToArray());
+                return record.generation.ToString();
             }
             else
             {
-                var gen = int.Parse(entry.ETag);
-                await _client.Put(
-                    new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true, generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, generation = gen },
-                    Task.Factory.CancellationToken,
-                    key, bins);
-                return (gen++).ToString();
+                var record = await _client.Operate(new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true}, 
+                    Task.Factory.CancellationToken, key, ops.ToArray());
+                return record.generation.ToString();
             }
         }
 
