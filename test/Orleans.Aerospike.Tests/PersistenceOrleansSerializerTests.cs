@@ -51,7 +51,7 @@ namespace Orleans.Aerospike.Tests
             Assert.Equal(state.NumberFloat, state2.NumberFloat);
             Assert.Equal(state.NumberInt, state2.NumberInt);
             Assert.Equal(state.DateTime, state2.DateTime);
-            Assert.Equal(state.Data.Count, state2.Data.Count);
+            Assert.Equal(state.StringList.Count, state2.StringList.Count);
             Assert.Equal(state.NumberShort, state2.NumberShort);
             Assert.Equal(state.Byte, state2.Byte);
             Assert.Equal(state.ByteArray.Length, state2.ByteArray.Length);

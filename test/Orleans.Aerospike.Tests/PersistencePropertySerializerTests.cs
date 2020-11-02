@@ -12,6 +12,7 @@ using Microsoft.VisualBasic.CompilerServices;
 using Orleans.Runtime;
 using Orleans.Persistence.Aerospike.Serializer;
 using Orleans.Aerospike.Tests.Grains;
+using System.Linq;
 
 namespace Orleans.Aerospike.Tests
 {
@@ -51,11 +52,17 @@ namespace Orleans.Aerospike.Tests
             Assert.Equal(state.NumberFloat, state2.NumberFloat);
             Assert.Equal(state.NumberInt, state2.NumberInt);
             Assert.Equal(state.DateTime, state2.DateTime);
-            Assert.Equal(state.Data.Count, state2.Data.Count);
+            Assert.Equal(state.StringList.Count, state2.StringList.Count);
             Assert.Equal(state.NumberShort, state2.NumberShort);
             Assert.Equal(state.Byte, state2.Byte);
             Assert.Equal(state.ByteArray.Length, state2.ByteArray.Length);
             Assert.Equal(state.NumberUInt, state2.NumberUInt);
+            Assert.Equal(state.NumberList.Count, state2.NumberList.Count);
+            Assert.Equal(state.NumberList[0], state2.NumberList[0]);
+            Assert.Equal(state.FloatList[0], state2.FloatList[0]);
+            Assert.Equal(state.MapStringInt.Count, state.MapStringInt.Count);
+            Assert.Equal(state.MapStringInt.Values.Sum(), state.MapStringInt.Values.Sum());
+            Assert.Equal(state.MapStringInt.Keys.First(), state.MapStringInt.Keys.First());
         }
     }
 }

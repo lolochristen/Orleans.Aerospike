@@ -3,6 +3,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel.Design;
 using System.Linq;
 using System.Reflection;
 
@@ -59,6 +60,41 @@ namespace Orleans.Persistence.Aerospike.Serializer
                     object enumValue;
                     Enum.TryParse(property.PropertyType, recordBin.Value.ToString(), out enumValue);
                     property.SetValue(obj, enumValue);
+                }
+                else if (typeof(IList<string>).IsAssignableFrom(property.PropertyType)) // Lists...
+                    property.SetValue(obj, ((IList<object>)recordBin.Value).Select(p => p.ToString()).ToList());
+                else if (typeof(IList<int>).IsAssignableFrom(property.PropertyType))
+                    property.SetValue(obj, ((IList<object>)recordBin.Value).Select(p => (int)(long)p).ToList());
+                else if (typeof(IList<long>).IsAssignableFrom(property.PropertyType))
+                    property.SetValue(obj, ((IList<object>)recordBin.Value).Select(p => (long)p).ToList());
+                else if (typeof(IList<short>).IsAssignableFrom(property.PropertyType))
+                    property.SetValue(obj, ((IList<object>)recordBin.Value).Select(p => (short)(long)p).ToList());
+                else if (typeof(IList<uint>).IsAssignableFrom(property.PropertyType))
+                    property.SetValue(obj, ((IList<object>)recordBin.Value).Select(p => (uint)(long)p).ToList());
+                else if (typeof(IList<ulong>).IsAssignableFrom(property.PropertyType))
+                    property.SetValue(obj, ((IList<object>)recordBin.Value).Select(p => (ulong)p).ToList());
+                else if (typeof(IList<ushort>).IsAssignableFrom(property.PropertyType))
+                    property.SetValue(obj, ((IList<object>)recordBin.Value).Select(p => (ushort)(long)p).ToList());
+                else if (typeof(IList<double>).IsAssignableFrom(property.PropertyType))
+                    property.SetValue(obj, ((IList<object>)recordBin.Value).Select(p => (double)p).ToList());
+                else if (typeof(IList<float>).IsAssignableFrom(property.PropertyType))
+                    property.SetValue(obj, ((IList<object>)recordBin.Value).Select(p => (float)p).ToList());
+                else if (typeof(IDictionary).IsAssignableFrom(property.PropertyType) // just generic dictionary of scalar types
+                    && property.PropertyType.IsGenericType
+                    && property.PropertyType.GenericTypeArguments.All(p =>
+                        p == typeof(int) || p == typeof(string) || p == typeof(long)
+                        || p == typeof(short) || p == typeof(uint) || p == typeof(ulong)
+                        || p == typeof(ushort) || p == typeof(double) || p == typeof(float)))
+                {
+                    // create dynamically generic dictionary
+                    var keyType = property.PropertyType.GenericTypeArguments[0];
+                    var valueType = property.PropertyType.GenericTypeArguments[1];
+                    var dictionaryType = typeof(Dictionary<,>).MakeGenericType(property.PropertyType.GenericTypeArguments);
+                    var methodAdd = dictionaryType.GetMethod("Add");
+                    var dicObj = Activator.CreateInstance(dictionaryType);
+                    foreach(var keyValue in ((IDictionary)recordBin.Value).Keys)
+                        methodAdd.Invoke(dicObj, new object[] { Convert.ChangeType(keyValue, keyType), Convert.ChangeType(((IDictionary)recordBin.Value)[keyValue], valueType) });
+                    property.SetValue(obj, dicObj);
                 }
                 else
                 {
@@ -122,7 +158,24 @@ namespace Orleans.Persistence.Aerospike.Serializer
                     binValue = new Value.BytesValue(((Guid)value).ToByteArray());
                 else if (propertyType.IsEnum)
                     binValue = new Value.StringValue(value.ToString());
-                else // to json
+                else if (typeof(IList<string>).IsAssignableFrom(propertyType)
+                        || typeof(IList<int>).IsAssignableFrom(propertyType)
+                        || typeof(IList<long>).IsAssignableFrom(propertyType)
+                        || typeof(IList<short>).IsAssignableFrom(propertyType)
+                        || typeof(IList<uint>).IsAssignableFrom(propertyType)
+                        || typeof(IList<ulong>).IsAssignableFrom(propertyType)
+                        || typeof(IList<ushort>).IsAssignableFrom(propertyType)
+                        || typeof(IList<double>).IsAssignableFrom(propertyType)
+                        || typeof(IList<float>).IsAssignableFrom(propertyType))
+                    binValue = new Value.ListValue((IList)value);
+                else if (typeof(IDictionary).IsAssignableFrom(propertyType) // just generic dictionary of scalar types
+                    && propertyType.IsGenericType 
+                    && propertyType.GenericTypeArguments.All(p => 
+                        p == typeof(int) || p == typeof(string) || p == typeof(long) 
+                        || p == typeof(short) || p == typeof(uint) || p == typeof(ulong) 
+                        || p == typeof(ushort) || p == typeof(double) || p == typeof(float)))
+                    binValue = new Value.MapValue((IDictionary)value);
+                else // all othersto json
                     binValue = new Value.StringValue(JsonConvert.SerializeObject(value));
 
                 binList.Add(new Bin(propertyInfo.Name, binValue));
