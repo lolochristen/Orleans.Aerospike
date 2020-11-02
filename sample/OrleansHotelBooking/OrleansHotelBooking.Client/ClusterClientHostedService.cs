@@ -19,17 +19,36 @@ namespace OrleansHotelBooking.Client
         public ClusterClientHostedService(ILogger<ClusterClientHostedService> logger, ILoggerProvider loggerProvider)
         {
             _logger = logger;
-            Client = new ClientBuilder()
-                .Configure<ClusterOptions>(options =>
-                {
-                    options.ClusterId = "dev";
-                    options.ServiceId = "OrleansTestDrive";
-                })
-                .UseLocalhostClustering()
-                //.UseAerospikeGatewayListProvider()
-                .ConfigureApplicationParts(parts => parts.AddApplicationPart(typeof(IHotelGrain).Assembly))
-                //.ConfigureLogging(builder => builder.AddProvider(loggerProvider))
-                .Build();
+
+            var args = Environment.GetCommandLineArgs();
+            if (args.Length >= 2 && args[1] == "cluster")
+            {
+                Client = new ClientBuilder()
+                    .Configure<ClusterOptions>(options =>
+                    {
+                        options.ClusterId = "dev";
+                        options.ServiceId = "OrleansTestDrive";
+                    })
+                    .UseAerospikeGatewayListProvider()
+                    .ConfigureApplicationParts(parts => parts.AddApplicationPart(typeof(IHotelGrain).Assembly))
+                    .ConfigureLogging(builder => builder.AddProvider(loggerProvider))
+                    .Build();
+            }
+            else
+            {
+                // local cluster
+                Client = new ClientBuilder()
+                    .Configure<ClusterOptions>(options =>
+                    {
+                        options.ClusterId = "dev";
+                        options.ServiceId = "OrleansTestDrive";
+                    })
+                    .UseLocalhostClustering()
+                    //.UseAerospikeGatewayListProvider()
+                    .ConfigureApplicationParts(parts => parts.AddApplicationPart(typeof(IHotelGrain).Assembly))
+                    .ConfigureLogging(builder => builder.AddProvider(loggerProvider))
+                    .Build();
+            }
         }
 
         public Task StartAsync(CancellationToken cancellationToken)
