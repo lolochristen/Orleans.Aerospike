@@ -24,7 +24,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MessagePack" Version="2.2.60" />
+    <PackageReference Include="MessagePack" Version="2.3.85" />
     <PackageReference Include="Microsoft.Orleans.Sdk" Version="4.0.0-preview1" />
     <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="4.0.0-preview1" />
     <PackageReference Include="Microsoft.Orleans.Serialization" Version="4.0.0-preview1" />
