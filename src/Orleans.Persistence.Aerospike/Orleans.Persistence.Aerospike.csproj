@@ -28,7 +28,7 @@
     <PackageReference Include="Microsoft.Orleans.Sdk" Version="4.0.0-preview1" />
     <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="4.0.0-preview1" />
     <PackageReference Include="Microsoft.Orleans.Serialization" Version="4.0.0-preview1" />
-    <PackageReference Include="Aerospike.Client" Version="3.9.10" />
+    <PackageReference Include="Aerospike.Client" Version="4.2.7" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
   
