@@ -10,8 +10,6 @@ using Orleans.Persistence.Aerospike;
 using Orleans.Runtime;
 using Orleans.Storage;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using Orleans.Persistence.Aerospike.Serializer;
 
 namespace Microsoft.Extensions.Hosting
@@ -21,38 +19,6 @@ namespace Microsoft.Extensions.Hosting
     /// </summary>
     public static class AeorpspikeHostingExtensions
     {
-        /// <summary>
-        /// Adds a Aerospike grain storage provider as the default provider
-        /// </summary>
-        public static ISiloHostBuilder AddAerospikeGrainStorageAsDefault(this ISiloHostBuilder builder, Action<AerospikeStorageOptions> configureOptions)
-        {
-            return builder.AddAerospikeGrainStorage(ProviderConstants.DEFAULT_STORAGE_PROVIDER_NAME, configureOptions);
-        }
-
-        /// <summary>
-        /// Adds a Aerospike grain storage provider.
-        /// </summary>
-        public static ISiloHostBuilder AddAerospikeGrainStorage(this ISiloHostBuilder builder, string name, Action<AerospikeStorageOptions> configureOptions)
-        {
-            return builder.ConfigureServices(services => services.AddAerospikeGrainStorage(name, configureOptions));
-        }
-
-        /// <summary>
-        /// Adds a Aerospike grain storage provider as the default provider
-        /// </summary>
-        public static ISiloHostBuilder AddAerospikeGrainStorageAsDefault(this ISiloHostBuilder builder, Action<OptionsBuilder<AerospikeStorageOptions>> configureOptions = null)
-        {
-            return builder.AddAerospikeGrainStorage(ProviderConstants.DEFAULT_STORAGE_PROVIDER_NAME, configureOptions);
-        }
-
-        /// <summary>
-        /// Adds a Aerospike grain storage provider.
-        /// </summary>
-        public static ISiloHostBuilder AddAerospikeGrainStorage(this ISiloHostBuilder builder, string name, Action<OptionsBuilder<AerospikeStorageOptions>> configureOptions = null)
-        {
-            return builder.ConfigureServices(services => services.AddAerospikeGrainStorage(name, configureOptions));
-        }
-
         /// <summary>
         /// Adds a Aerospike grain storage provider as the default provider
         /// </summary>

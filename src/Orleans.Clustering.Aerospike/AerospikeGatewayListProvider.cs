@@ -1,37 +1,32 @@
 ﻿using Aerospike.Client;
-using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Orleans.Configuration;
 using Orleans.Messaging;
 using Orleans.Runtime;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Orleans.Clustering.Aerospike
 {
-    public class AerospikeGatewayListProvider : IGatewayListProvider
+    public class AerospikeGatewayListProvider : IGatewayListProvider, IDisposable
     {
-        private TimeSpan _maxStalness;
         private bool _isUpdated;
-        private string _clusterId;
-        private TimeSpan _maxStaleness;
-        private ILoggerFactory _loggerFactory;
-        private AerospikeGatewayOptions _options;
+        private readonly string _clusterId;
+        private readonly TimeSpan _maxStaleness;
+        private readonly AerospikeGatewayOptions _options;
         private AsyncClientPolicy _clientPolicy;
         private AsyncClient _client;
 
-        public TimeSpan MaxStaleness => _maxStalness;
+        public TimeSpan MaxStaleness => _maxStaleness;
 
         public bool IsUpdatable => _isUpdated;
 
-        public AerospikeGatewayListProvider(ILoggerFactory loggerFactory, IOptions<AerospikeGatewayOptions> options,
+        public AerospikeGatewayListProvider(IOptions<AerospikeGatewayOptions> options,
             IOptions<ClusterOptions> clusterOptions, IOptions<GatewayOptions> gatewayOptions)
         {
             _clusterId = clusterOptions.Value.ClusterId;
             _maxStaleness = gatewayOptions.Value.GatewayListRefreshPeriod;
-            _loggerFactory = loggerFactory;
             _options = options.Value;
         }
 
@@ -77,6 +72,12 @@ namespace Orleans.Clustering.Aerospike
 
                 _client = new AsyncClient(_clientPolicy, _options.Host, _options.Port);
             });
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            _client.Dispose();
         }
     }
 }

@@ -13,15 +13,15 @@ namespace Orleans.Reminders.Aerospike
     public class AerospikeReminderTable : IReminderTable
     {
         private ClusterOptions _clusterOptions;
-        private readonly IGrainReferenceConverter _grainReferenceConverter;
+        private readonly GrainReferenceKeyStringConverter _grainReferenceConverter;
         private ILoggerFactory _loggerFactory;
         private ILogger<AerospikeReminderTable> _logger;
-        private AerospikeReminderStorageOptions _options;
+        private readonly AerospikeReminderStorageOptions _options;
         private AsyncClientPolicy _clientPolicy;
         private AsyncClient _client;
         private readonly string _serviceId;
 
-        public AerospikeReminderTable(IGrainReferenceConverter grainReferenceConverter, ILoggerFactory loggerFactory, IOptions<ClusterOptions> clusterOptions, IOptions<AerospikeReminderStorageOptions> clusteringOptions)
+        public AerospikeReminderTable(GrainReferenceKeyStringConverter grainReferenceConverter, ILoggerFactory loggerFactory, IOptions<ClusterOptions> clusterOptions, IOptions<AerospikeReminderStorageOptions> clusteringOptions)
         {
             _clusterOptions = clusterOptions.Value;
             _grainReferenceConverter = grainReferenceConverter;
@@ -50,7 +50,9 @@ namespace Orleans.Reminders.Aerospike
                     task.Wait();
                 }
                 catch (Exception)
-                { }
+                {
+                    // ignored
+                }
             });
         }
 
@@ -157,7 +159,7 @@ namespace Orleans.Reminders.Aerospike
             }
             else
             {
-                var record = await _client.Operate(new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true}, 
+                var record = await _client.Operate(new WritePolicy(_clientPolicy.writePolicyDefault) { sendKey = true},
                     Task.Factory.CancellationToken, key, ops.ToArray());
                 return record.generation.ToString();
             }
@@ -165,7 +167,7 @@ namespace Orleans.Reminders.Aerospike
 
         private Bin[] ToBins(ReminderEntry entry)
         {
-            return new Bin[] 
+            return new Bin[]
             {
                 //Id = ReminderEntity.ConstructId(entry.GrainRef, entry.ReminderName),
                 //PartitionKey = ReminderEntity.ConstructPartitionKey(this._serviceId, entry.GrainRef),
@@ -181,7 +183,7 @@ namespace Orleans.Reminders.Aerospike
         {
             var entry = new ReminderEntry();
             entry.ETag = record.generation.ToString();
-            entry.GrainRef = _grainReferenceConverter.GetGrainFromKeyString((string)record.bins["grainref"]);
+            entry.GrainRef = _grainReferenceConverter.FromKeyString((string)record.bins["grainref"]);
             entry.Period = new TimeSpan((long)record.bins["period"]);
             entry.ReminderName = (string)record.bins["name"];
             entry.StartAt = DateTime.FromBinary((long)record.bins["startat"]);
@@ -190,7 +192,7 @@ namespace Orleans.Reminders.Aerospike
 
         private string GetId(GrainReference grainRef, string reminderName)
         {
-            return grainRef.ToShortKeyString() + reminderName;
+            return grainRef.ToKeyString() + reminderName;
         }
 
         private Key CreateKey(GrainReference grainRef, string reminderName)

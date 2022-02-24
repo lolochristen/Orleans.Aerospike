@@ -4,8 +4,7 @@ namespace Orleans.Persistence.Aerospike.Serializer
 {
     public interface IAerospikeSerializer
     {
-        Bin[] Serialize(IGrainState grainState);
-        void Deserialize(Record record, IGrainState grainState);
+        Bin[] Serialize<T>(IGrainState<T> grainState);
+        void Deserialize<T>(Record record, IGrainState<T> grainState);
     }
 }
-

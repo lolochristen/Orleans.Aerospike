@@ -3,9 +3,6 @@ using Microsoft.Extensions.Options;
 using Orleans.Clustering.Aerospike;
 using Orleans.Configuration;
 using Orleans.Messaging;
-using System;
-using System.Collections.ObjectModel;
-using System.Net.Http;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -35,7 +32,7 @@ namespace Orleans.Aerospike.Tests
                 CleanupOnInit = true,
                 SetName = "OrleansMBRTest"
             };
-            return new AerospikeMembershipTable(this.loggerFactory, Options.Create(new ClusterOptions { ClusterId = this.clusterId }), Options.Create(options));
+            return new AerospikeMembershipTable(this.loggerFactory.CreateLogger<AerospikeMembershipTable>(), Options.Create(new ClusterOptions { ClusterId = this.clusterId }), Options.Create(options));
         }
 
         protected override IGatewayListProvider CreateGatewayListProvider(ILogger logger)
@@ -45,7 +42,7 @@ namespace Orleans.Aerospike.Tests
                 SetName = "OrleansMBRTest"
             };
 
-            return new AerospikeGatewayListProvider(this.loggerFactory,
+            return new AerospikeGatewayListProvider(
                 Options.Create(options),
                 Options.Create(new ClusterOptions { ClusterId = this.clusterId }),
                 Options.Create(new GatewayOptions()));

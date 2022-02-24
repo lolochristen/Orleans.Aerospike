@@ -69,3 +69,5 @@ await silo.StartAsync();
 ## Quickstart on Windows
 Aerospike runs only with Linux. Therefore a local development environment on Windows can be setup using WSL2 following the instructions on https://www.aerospike.com/docs/operations/install/linux/ for the Community Edition. To start Aerospike execute ```sudo asd --foreground```.
 
+## Quickstart using Docker Compose
+You can use Docker Compose to start an Aerospike instance by executing ```docker-compose up``` in the repository root directory.

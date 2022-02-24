@@ -3,8 +3,6 @@ using Microsoft.Extensions.Options;
 using Orleans.Persistence.Aerospike;
 using Orleans.Storage;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Orleans.Persistence
 {

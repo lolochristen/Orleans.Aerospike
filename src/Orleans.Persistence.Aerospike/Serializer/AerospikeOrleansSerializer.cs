@@ -1,34 +1,32 @@
 ﻿using Aerospike.Client;
-using Orleans.Serialization;
 
 namespace Orleans.Persistence.Aerospike.Serializer
 {
     public class AerospikeOrleansSerializer : IAerospikeSerializer
     {
-        private readonly SerializationManager _serializationManager;
+        private readonly Serialization.Serializer _serializationManager;
 
-        public AerospikeOrleansSerializer(SerializationManager serializationManager)
+        public AerospikeOrleansSerializer(Serialization.Serializer serializationManager)
         {
             _serializationManager = serializationManager;
         }
 
-        public Bin[] Serialize(IGrainState grainState)
+        public Bin[] Serialize<T>(IGrainState<T> grainState)
         {
-            var data = _serializationManager.SerializeToByteArray(grainState.State);
-            
+            var data = _serializationManager.SerializeToArray(grainState.State);
+
             Bin[] bins = new Bin[]
             {
                 new Bin("data", data),
-                new Bin("type", grainState.Type.Name)
+                new Bin("type", typeof(T).Name)
             };
             return bins;
         }
 
-        public void Deserialize(Record record, IGrainState grainState)
+        public void Deserialize<T>(Record record, IGrainState<T> grainState)
         {
             var data = record.bins["data"] as byte[];
-            grainState.State = _serializationManager.DeserializeFromByteArray<object>(data);
+            grainState.State = _serializationManager.Deserialize<T>(data);
         }
     }
 }
-

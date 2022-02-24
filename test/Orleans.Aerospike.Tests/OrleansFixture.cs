@@ -29,7 +29,7 @@ namespace Orleans.Aerospike.Tests
             var siloPort = EndpointOptions.DEFAULT_SILO_PORT + portInc;
             var gatewayPort = EndpointOptions.DEFAULT_GATEWAY_PORT + portInc;
             var silo = new HostBuilder()
-                .ConfigureLogging(builder =>  { builder.AddConsole(); })
+                .ConfigureLogging(builder => { builder.AddConsole(); })
                 .UseOrleans(b =>
                 {
                     b.UseLocalhostClustering();
@@ -39,13 +39,11 @@ namespace Orleans.Aerospike.Tests
                         options.ClusterId = ClusterId;
                         options.ServiceId = serviceId;
                     });
-                    //b.ConfigureApplicationParts(pm => pm.AddApplicationPart(typeof(PersistenceTests).Assembly));
                     PreBuild(b);
                 })
                 .Build();
 
             this.Host = silo;
-
             this.Client = this.Host.Services.GetRequiredService<IClusterClient>();
         }
 
@@ -61,7 +59,10 @@ namespace Orleans.Aerospike.Tests
             {
                 await Host.StopAsync();
             }
-            catch { }
+            catch
+            {
+                // ignored
+            }
         }
 
         public async Task DeactivateGrains()

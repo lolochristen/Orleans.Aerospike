@@ -3,7 +3,6 @@ using Newtonsoft.Json;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel.Design;
 using System.Linq;
 using System.Reflection;
 
@@ -11,10 +10,10 @@ namespace Orleans.Persistence.Aerospike.Serializer
 {
     public class AerospikePropertySerializer : IAerospikeSerializer
     {
-        public void Deserialize(Record record, IGrainState grainState)
+        public void Deserialize<T>(Record record, IGrainState<T> grainState)
         {
-            var properties = grainState.Type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
-            var obj = Activator.CreateInstance(grainState.Type);
+            var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var obj = Activator.CreateInstance(typeof(T));
 
             foreach (var recordBin in record.bins)
             {
@@ -105,16 +104,16 @@ namespace Orleans.Persistence.Aerospike.Serializer
                 }
             }
 
-            grainState.State = obj;
+            grainState.State = (T)obj;
         }
 
-        public Bin[] Serialize(IGrainState grainState)
+        public Bin[] Serialize<T>(IGrainState<T> grainState)
         {
-            var properties = grainState.Type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
+            var properties = typeof(T).GetProperties(BindingFlags.Public | BindingFlags.Instance);
 
             List<Bin> binList = new List<Bin>();
 
-            binList.Add(new Bin("type", grainState.Type.Name));
+            binList.Add(new Bin("type", typeof(T).Name));
 
             foreach (var propertyInfo in properties)
             {
@@ -169,10 +168,10 @@ namespace Orleans.Persistence.Aerospike.Serializer
                         || typeof(IList<float>).IsAssignableFrom(propertyType))
                     binValue = new Value.ListValue((IList)value);
                 else if (typeof(IDictionary).IsAssignableFrom(propertyType) // just generic dictionary of scalar types
-                    && propertyType.IsGenericType 
-                    && propertyType.GenericTypeArguments.All(p => 
-                        p == typeof(int) || p == typeof(string) || p == typeof(long) 
-                        || p == typeof(short) || p == typeof(uint) || p == typeof(ulong) 
+                    && propertyType.IsGenericType
+                    && propertyType.GenericTypeArguments.All(p =>
+                        p == typeof(int) || p == typeof(string) || p == typeof(long)
+                        || p == typeof(short) || p == typeof(uint) || p == typeof(ulong)
                         || p == typeof(ushort) || p == typeof(double) || p == typeof(float)))
                     binValue = new Value.MapValue((IDictionary)value);
                 else // all othersto json
@@ -184,4 +183,3 @@ namespace Orleans.Persistence.Aerospike.Serializer
         }
     }
 }
-

@@ -1,0 +1,17 @@
+---
+version: "3.2"
+
+services:
+  aerospike:
+    image: aerospike/aerospike-server:5.7.0.8
+    command:
+      - "--config-file=/run/secrets/aerospike.conf"
+    secrets:
+      - source: aerospike
+        target: aerospike.conf
+    ports:
+      - "3000:3000/tcp"
+
+secrets:
+  aerospike:
+    file: ./docker/aerospike.conf
