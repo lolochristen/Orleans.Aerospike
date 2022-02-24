@@ -5,34 +5,11 @@ using Orleans.Clustering.Aerospike;
 using Orleans.Hosting;
 using Orleans.Messaging;
 using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace Microsoft.Extensions.Hosting
 {
     public static class AerospikeHostingExtensions
     {
-        public static ISiloHostBuilder UseAerospikeMembership(this ISiloHostBuilder builder,
-           Action<AerospikeClusteringOptions> configureOptions)
-        {
-            return builder.ConfigureServices(services => services.UseAerospikeMembership(configureOptions));
-        }
-
-        public static ISiloHostBuilder UseAerospikeMembership(this ISiloHostBuilder builder,
-            Action<OptionsBuilder<AerospikeClusteringOptions>> configureOptions)
-        {
-            return builder.ConfigureServices(services => services.UseAerospikeMembership(configureOptions));
-        }
-
-        public static ISiloHostBuilder UseAerospikeMembership(this ISiloHostBuilder builder)
-        {
-            return builder.ConfigureServices(services =>
-            {
-                services.AddOptions<AerospikeClusteringOptions>();
-                services.AddSingleton<IMembershipTable, AerospikeMembershipTable>();
-            });
-        }
-
         public static ISiloBuilder UseAerospikeMembership(this ISiloBuilder builder,
            Action<AerospikeClusteringOptions> configureOptions)
         {

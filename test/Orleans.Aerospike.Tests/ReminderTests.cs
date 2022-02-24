@@ -2,8 +2,6 @@
 using Orleans.Hosting;
 using Orleans.Reminders.Aerospike;
 using System;
-using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -21,7 +19,7 @@ namespace Orleans.Aerospike.Tests
             }
         }
 
-        private ReminderFixture _fixture;
+        private readonly ReminderFixture _fixture;
 
         public ReminderTests(ReminderFixture fixture)
         {

@@ -1,26 +1,22 @@
 ﻿using Aerospike.Client;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
-using Orleans.ApplicationParts;
 using Orleans.Persistence.Aerospike.Serializer;
 using Orleans.Runtime;
-using Orleans.Serialization;
 using Orleans.Storage;
 using System;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Orleans.Persistence.Aerospike
 {
-    public class AerospikeGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloLifecycle>
+    public class AerospikeGrainStorage : IGrainStorage, ILifecycleParticipant<ISiloLifecycle>, IDisposable
     {
-        private AerospikeStorageOptions _options;
-        private string _name;
-        private ILogger _logger;
+        private readonly AerospikeStorageOptions _options;
+        private readonly string _name;
+        private readonly ILogger _logger;
+        private readonly IAerospikeSerializer _aerospikeSerializer;
         private AsyncClient _client;
-        private IAerospikeSerializer _aerospikeSerializer;
 
         private AsyncClientPolicy _clientPolicy;
         private BatchPolicy _readPolicy;
@@ -45,7 +41,8 @@ namespace Orleans.Persistence.Aerospike
 
         public async Task Init(CancellationToken cancellationToken)
         {
-            _logger.LogInformation($"Init host={_options.Host} port={_options.Port} ns:{_options.Namespace} serializer={_aerospikeSerializer.GetType().Name}");
+            _logger.LogInformation("Init host={Host} port={Port} ns:{Namespace} serializer={SerializerName}",
+                _options.Host, _options.Port, _options.Namespace, _aerospikeSerializer.GetType().Name);
 
             _clientPolicy = new AsyncClientPolicy()
             {
@@ -65,7 +62,7 @@ namespace Orleans.Persistence.Aerospike
             };
 
             Log.SetLevel(Log.Level.INFO);
-            Log.SetCallback((level, message) => 
+            Log.SetCallback((level, message) =>
             {
                 LogLevel logLevel = LogLevel.None;
                 switch(level)
@@ -83,11 +80,11 @@ namespace Orleans.Persistence.Aerospike
                         logLevel = LogLevel.Warning;
                         break;
                 }
-                _logger.Log(logLevel, "Aerospike-Message: " + message);
+                _logger.Log(logLevel, "Aerospike-Message: {Message}", message);
             });
 
             _client = new AsyncClient(_clientPolicy,
-                _options.Host, 
+                _options.Host,
                 _options.Port);
         }
 
@@ -96,7 +93,7 @@ namespace Orleans.Persistence.Aerospike
             _client.Close();
         }
 
-        public async Task ClearStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+        public async Task ClearStateAsync<T>(string grainType, GrainReference grainReference, IGrainState<T> grainState)
         {
             var key = GetKey(grainReference, grainState);
 
@@ -108,16 +105,16 @@ namespace Orleans.Persistence.Aerospike
             }
             catch (AerospikeException aep)
             {
-                _logger.LogError(aep, $"Failure clearing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(aep, "Failure clearing state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
                 throw new AerospikeOrleansException(aep.Message);
             }
             catch (Exception exp)
             {
-                _logger.LogError(exp, $"Failure clearing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(exp, "Failure clearing state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
             }
         }
 
-        public async Task ReadStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+        public async Task ReadStateAsync<T>(string grainType, GrainReference grainReference, IGrainState<T> grainState)
         {
             var key = GetKey(grainReference, grainState);
 
@@ -138,18 +135,18 @@ namespace Orleans.Persistence.Aerospike
             }
             catch (AerospikeException aep)
             {
-                _logger.LogError(aep, $"Failure reading state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(aep, "Failure reading state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
                 throw new AerospikeOrleansException(aep.Message);
             }
             catch (Exception exp)
             {
-                _logger.LogError(exp, $"Failure reading state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(exp, "Failure reading state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
                 grainState.ETag = null;
                 grainState.RecordExists = true;
             }
         }
 
-        public async Task WriteStateAsync(string grainType, GrainReference grainReference, IGrainState grainState)
+        public async Task WriteStateAsync<T>(string grainType, GrainReference grainReference, IGrainState<T> grainState)
         {
             var key = GetKey(grainReference, grainState);
             //_logger.LogInformation($"Put {grainType} {grainReference.GetPrimaryKeyString()}");
@@ -184,19 +181,25 @@ namespace Orleans.Persistence.Aerospike
                     throw new InconsistentStateException($"Generation conflict while writing Grain Type {grainType} with key {grainReference.ToKeyString()}. Error:{aep.Message}",  grainState.ETag, "?");
                 }
 
-                _logger.LogError(aep, $"Failure writing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
-                throw new AerospikeOrleansException(aep.Message); // simple serializable excepction
+                _logger.LogError(aep, "Failure writing state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
+                throw new AerospikeOrleansException(aep.Message); // simple serializable exception
             }
             catch (Exception exp)
             {
-                _logger.LogError(exp, $"Failure writing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(exp, "Failure writing state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
                 throw;
             }
         }
 
-        private Key GetKey(GrainReference grainReference, IGrainState state)
+        private Key GetKey<T>(GrainReference grainReference, IGrainState<T> state)
         {
-            return new Key(_options.Namespace, _name + "_" + state.Type.Name, grainReference.ToShortKeyString());
+            return new Key(_options.Namespace, _name + "_" + typeof(T).Name, grainReference.ToKeyString());
+        }
+
+        /// <inheritdoc />
+        public void Dispose()
+        {
+            _client.Dispose();
         }
     }
 }

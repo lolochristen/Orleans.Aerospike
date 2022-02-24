@@ -4,26 +4,25 @@ namespace Orleans.Persistence.Aerospike.Serializer
 {
     public class AerospikeJsonSerializer : IAerospikeSerializer
     {
-        public Bin[] Serialize(IGrainState grainState)
+        public Bin[] Serialize<T>(IGrainState<T> grainState)
         {
             var data = Newtonsoft.Json.JsonConvert.SerializeObject(grainState.State);
 
             Bin[] bins = new Bin[]
             {
                 new Bin("data", data),
-                new Bin("type", grainState.Type.Name)
+                new Bin("type", typeof(T).Name)
             };
             return bins;
         }
 
-        public void Deserialize(Record record, IGrainState grainState)
+        public void Deserialize<T>(Record record, IGrainState<T> grainState)
         {
             var data = record.bins["data"].ToString();
-            grainState.State = Newtonsoft.Json.JsonConvert.DeserializeObject(data, grainState.Type);
+            grainState.State = (T)Newtonsoft.Json.JsonConvert.DeserializeObject(data!, typeof(T));
         }
     }
 
 
 
 }
-

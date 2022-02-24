@@ -1,15 +1,8 @@
-﻿using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Orleans.Configuration;
+﻿using Microsoft.Extensions.Hosting;
 using Orleans.Hosting;
-using Orleans.TestingHost;
 using System;
-using System.Threading;
 using System.Threading.Tasks;
 using Xunit;
-using System.Collections.Generic;
-using Microsoft.VisualBasic.CompilerServices;
-using Orleans.Runtime;
 using Orleans.Persistence.Aerospike.Serializer;
 using Orleans.Aerospike.Tests.Grains;
 using System.Linq;
@@ -28,7 +21,7 @@ namespace Orleans.Aerospike.Tests
             }
         }
 
-        private StorageFixture _fixture;
+        private readonly StorageFixture _fixture;
 
         public PersistencePropertySerializerTests(StorageFixture fixture) => this._fixture = fixture;
 

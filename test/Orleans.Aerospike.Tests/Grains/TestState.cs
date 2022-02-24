@@ -3,26 +3,27 @@ using System.Collections.Generic;
 
 namespace Orleans.Aerospike.Tests.Grains
 {
+    [Serializable]
+    [GenerateSerializer]
     public class TestState
     {
-        public int NumberInt { get; set; }
-        public long NumberLong { get; set; }
-        public string Text { get; set; }
-        public float NumberFloat { get; set; }
-        public double NumberDouble { get; set; }
-        public DateTime DateTime { get; set; }
-        public Guid Guid { get; set; }
-        public List<string> StringList { get; set; } = new List<string>();
-        public short NumberShort { get; set; }
-        public char Char { get; set; }
-        public byte[] ByteArray { get; set; }
-        public byte Byte { get; set; }
-        public uint NumberUInt { get; set; }
-        public List<int> NumberList { get; set; } = new List<int>();
-        public List<float> FloatList { get; set; } = new List<float>();
-        public Dictionary<string, int> MapStringInt { get; set; }
-
-        public Dictionary<string, TestState> StateInState { get; set; }
+        [Id(0)] public int NumberInt { get; set; }
+        [Id(1)] public long NumberLong { get; set; }
+        [Id(2)] public string Text { get; set; }
+        [Id(3)] public float NumberFloat { get; set; }
+        [Id(4)] public double NumberDouble { get; set; }
+        [Id(5)] public DateTime DateTime { get; set; }
+        [Id(6)] public Guid Guid { get; set; }
+        [Id(7)] public List<string> StringList { get; set; } = new List<string>();
+        [Id(8)] public short NumberShort { get; set; }
+        [Id(9)] public char Char { get; set; }
+        [Id(10)] public byte[] ByteArray { get; set; }
+        [Id(11)] public byte Byte { get; set; }
+        [Id(12)] public uint NumberUInt { get; set; }
+        [Id(13)] public List<int> NumberList { get; set; } = new List<int>();
+        [Id(14)] public List<float> FloatList { get; set; } = new List<float>();
+        [Id(15)] public Dictionary<string, int> MapStringInt { get; set; }
+        [Id(16)] public Dictionary<string, TestState> StateInState { get; set; }
 
         public static TestState CreateTestState()
         {

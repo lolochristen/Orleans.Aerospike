@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>netstandard2.1</TargetFramework>
+    <TargetFrameworks>netcoreapp3.1;net5.0;net6.0</TargetFrameworks>
     <LangVersion>latest</LangVersion>
   </PropertyGroup>
   
@@ -24,11 +24,12 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="MessagePack" Version="2.2.60" />
-    <PackageReference Include="Microsoft.Orleans.OrleansProviders" Version="3.3.0" />
-    <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="3.3.0" />
-    <PackageReference Include="Aerospike.Client" Version="3.9.10" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="MessagePack" Version="2.3.85" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="4.0.0-preview1" />
+    <PackageReference Include="Microsoft.Orleans.OrleansRuntime" Version="4.0.0-preview1" />
+    <PackageReference Include="Microsoft.Orleans.Serialization" Version="4.0.0-preview1" />
+    <PackageReference Include="Aerospike.Client" Version="4.2.7" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />
   </ItemGroup>
   
 </Project>

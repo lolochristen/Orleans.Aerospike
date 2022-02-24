@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace Orleans.Persistence.Aerospike
+﻿namespace Orleans.Persistence.Aerospike
 {
     public class AerospikeStorageOptions
     {
