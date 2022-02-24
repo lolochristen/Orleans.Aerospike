@@ -45,7 +45,8 @@ namespace Orleans.Persistence.Aerospike
 
         public async Task Init(CancellationToken cancellationToken)
         {
-            _logger.LogInformation($"Init host={_options.Host} port={_options.Port} ns:{_options.Namespace} serializer={_aerospikeSerializer.GetType().Name}");
+            _logger.LogInformation("Init host={Host} port={Port} ns:{Namespace} serializer={SerializerName}",
+                _options.Host, _options.Port, _options.Namespace, _aerospikeSerializer.GetType().Name);
 
             _clientPolicy = new AsyncClientPolicy()
             {
@@ -65,7 +66,7 @@ namespace Orleans.Persistence.Aerospike
             };
 
             Log.SetLevel(Log.Level.INFO);
-            Log.SetCallback((level, message) => 
+            Log.SetCallback((level, message) =>
             {
                 LogLevel logLevel = LogLevel.None;
                 switch(level)
@@ -83,11 +84,11 @@ namespace Orleans.Persistence.Aerospike
                         logLevel = LogLevel.Warning;
                         break;
                 }
-                _logger.Log(logLevel, "Aerospike-Message: " + message);
+                _logger.Log(logLevel, "Aerospike-Message: {Message}", message);
             });
 
             _client = new AsyncClient(_clientPolicy,
-                _options.Host, 
+                _options.Host,
                 _options.Port);
         }
 
@@ -108,12 +109,12 @@ namespace Orleans.Persistence.Aerospike
             }
             catch (AerospikeException aep)
             {
-                _logger.LogError(aep, $"Failure clearing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(aep, "Failure clearing state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
                 throw new AerospikeOrleansException(aep.Message);
             }
             catch (Exception exp)
             {
-                _logger.LogError(exp, $"Failure clearing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(exp, "Failure clearing state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
             }
         }
 
@@ -138,12 +139,12 @@ namespace Orleans.Persistence.Aerospike
             }
             catch (AerospikeException aep)
             {
-                _logger.LogError(aep, $"Failure reading state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(aep, "Failure reading state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
                 throw new AerospikeOrleansException(aep.Message);
             }
             catch (Exception exp)
             {
-                _logger.LogError(exp, $"Failure reading state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(exp, "Failure reading state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
                 grainState.ETag = null;
                 grainState.RecordExists = true;
             }
@@ -184,12 +185,12 @@ namespace Orleans.Persistence.Aerospike
                     throw new InconsistentStateException($"Generation conflict while writing Grain Type {grainType} with key {grainReference.ToKeyString()}. Error:{aep.Message}",  grainState.ETag, "?");
                 }
 
-                _logger.LogError(aep, $"Failure writing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
-                throw new AerospikeOrleansException(aep.Message); // simple serializable excepction
+                _logger.LogError(aep, "Failure writing state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
+                throw new AerospikeOrleansException(aep.Message); // simple serializable exception
             }
             catch (Exception exp)
             {
-                _logger.LogError(exp, $"Failure writing state for Grain Type {grainType} with key {grainReference.ToKeyString()}.");
+                _logger.LogError(exp, "Failure writing state for Grain Type {GrainType} with key {GrainKey}", grainType, grainReference.ToKeyString());
                 throw;
             }
         }

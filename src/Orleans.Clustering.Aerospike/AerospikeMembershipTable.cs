@@ -39,7 +39,7 @@ namespace Orleans.Clustering.Aerospike
                 }
                 catch(Exception exp)
                 {
-                    _logger.LogError(exp, "Truncate failed. {0} {1} {2} ", _options.Namespace, _options.SetName, beforeDate);
+                    _logger.LogError(exp, "Truncate failed: {Namespace} {SetName} {BeforeDate}", _options.Namespace, _options.SetName, beforeDate);
                     throw;
                 }
             });
@@ -96,7 +96,7 @@ namespace Orleans.Clustering.Aerospike
             }
             catch(Exception exp)
             {
-                _logger.LogError(exp, "Insert MembershipEntry failed.");
+                _logger.LogError(exp, "Insert MembershipEntry failed");
                 return false;
             }
         }
@@ -184,7 +184,7 @@ namespace Orleans.Clustering.Aerospike
                        recordExistsAction = RecordExistsAction.UPDATE
                    },
                    Task.Factory.CancellationToken,
-                   new Key(_options.Namespace, _options.SetName, siloid), 
+                   new Key(_options.Namespace, _options.SetName, siloid),
                    new Bin[] { new Bin("iamalivetime", entry.IAmAliveTime.ToBinary()) });
         }
 
@@ -198,7 +198,7 @@ namespace Orleans.Clustering.Aerospike
             }
             catch(Exception exp)
             {
-                _logger.LogError(exp, "Update MembershipEntry failed.");
+                _logger.LogError(exp, "Update MembershipEntry failed");
                 return false;
             }
         }
@@ -234,10 +234,10 @@ namespace Orleans.Clustering.Aerospike
                 await _client.Put(
                     new WritePolicy(_clientPolicy.writePolicyDefault)
                     {
-                        sendKey = true, 
-                        recordExistsAction = isUpdate ? RecordExistsAction.UPDATE : RecordExistsAction.CREATE_ONLY 
-                    }, 
-                    Task.Factory.CancellationToken, 
+                        sendKey = true,
+                        recordExistsAction = isUpdate ? RecordExistsAction.UPDATE : RecordExistsAction.CREATE_ONLY
+                    },
+                    Task.Factory.CancellationToken,
                     new Key(_options.Namespace, _options.SetName, siloid), bins);
             }
             else
@@ -247,10 +247,10 @@ namespace Orleans.Clustering.Aerospike
                     {
                         sendKey = true,
                         recordExistsAction = isUpdate ? RecordExistsAction.UPDATE : RecordExistsAction.CREATE_ONLY,
-                        generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, 
+                        generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL,
                         generation = int.Parse(etag)
-                    }, 
-                    Task.Factory.CancellationToken, 
+                    },
+                    Task.Factory.CancellationToken,
                     new Key(_options.Namespace, _options.SetName, siloid), bins);
             }
         }
@@ -270,8 +270,8 @@ namespace Orleans.Clustering.Aerospike
             else
             {
                 await _client.Put(
-                    new WritePolicy() { sendKey = true, generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, generation = int.Parse(version.VersionEtag) }, 
-                    Task.Factory.CancellationToken, 
+                    new WritePolicy() { sendKey = true, generationPolicy = GenerationPolicy.EXPECT_GEN_EQUAL, generation = int.Parse(version.VersionEtag) },
+                    Task.Factory.CancellationToken,
                     new Key(_options.Namespace, _options.SetName, id), bins);
             }
         }
